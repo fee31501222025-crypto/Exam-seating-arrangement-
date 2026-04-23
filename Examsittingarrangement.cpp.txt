@@ -1,0 +1,173 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+#include <random>
+#include <algorithm>
+
+using namespace std;
+
+// Class to represent a student
+class Student {
+public:
+    string name;
+    int seatNumber;
+
+    Student(string n) {
+        name = n;
+        seatNumber = -1;
+    }
+};
+
+// Class to represent an exam room
+class ExamRoom {
+private:
+    int capacity;
+    vector<Student*> students;
+    vector<int> seats;
+    string roomName;
+
+public:
+    ExamRoom(string rName, int cap) : roomName(rName), capacity(cap) {
+        for (int i = 1; i <= capacity; i++) {
+            seats.push_back(i);
+        }
+    }
+
+    void addStudent(Student* s) {
+        if (students.size() < capacity) {
+            students.push_back(s);
+        } else {
+            cout << "Room is full. Cannot add more students.\n";
+        }
+    }
+
+    void assignSeatsRandomly() {
+        random_device rd;
+        mt19937 g(rd());
+        shuffle(seats.begin(), seats.end(), g);
+
+        for (size_t i = 0; i < students.size(); i++) {
+            students[i]->seatNumber = seats[i];
+        }
+    }
+
+    void printSeatingPlan() {
+        cout << "\nSeating Plan for Room: " << roomName << endl;
+        cout << "---------------------------------\n";
+
+        sort(students.begin(), students.end(),
+            [](Student* a, Student* b) {
+                return a->seatNumber < b->seatNumber;
+            });
+
+        for (Student* s : students) {
+            cout << "Seat " << s->seatNumber << " : " << s->name << endl;
+        }
+    }
+
+    void saveSeatingPlanToFile() {
+        ofstream file(roomName + "_seating.txt");
+
+        if (!file) {
+            cout << "Error saving file.\n";
+            return;
+        }
+
+        file << "Seating Plan for Room: " << roomName << "\n";
+        file << "---------------------------------\n";
+
+        for (Student* s : students) {
+            file << "Seat " << s->seatNumber << " : " << s->name << endl;
+        }
+
+        file.close();
+    }
+
+    void searchStudent(string studentName) {
+        for (Student* s : students) {
+            if (s->name == studentName) {
+                cout << studentName << " is seated at Seat "
+                     << s->seatNumber << " in Room "
+                     << roomName << endl;
+                return;
+            }
+        }
+        cout << "Student not found in this room.\n";
+    }
+
+    ~ExamRoom() {
+        for (Student* s : students) {
+            delete s;
+        }
+    }
+};
+
+int main() {
+    int numRooms;
+    cout << "Enter number of rooms: ";
+    cin >> numRooms;
+    cin.ignore();
+
+    vector<ExamRoom*> rooms;
+
+    for (int i = 0; i < numRooms; i++) {
+        string roomName;
+        int roomCapacity;
+
+        cout << "\nEnter Room " << i + 1 << " Name: ";
+        getline(cin, roomName);
+
+        cout << "Enter Room Capacity: ";
+        cin >> roomCapacity;
+        cin.ignore();
+
+        ExamRoom* room = new ExamRoom(roomName, roomCapacity);
+
+        int n;
+        cout << "Enter number of students in this room: ";
+        cin >> n;
+        cin.ignore();
+
+        if (n > roomCapacity) {
+            cout << "Warning: Students exceed capacity. Only first "
+                 << roomCapacity << " will be assigned.\n";
+            n = roomCapacity;
+        }
+
+        for (int j = 0; j < n; j++) {
+            string sName;
+            cout << "Enter student " << j + 1 << " name: ";
+            getline(cin, sName);
+
+            Student* s = new Student(sName);
+            room->addStudent(s);
+        }
+
+        room->assignSeatsRandomly();
+        rooms.push_back(room);
+    }
+
+    for (ExamRoom* r : rooms) {
+        r->printSeatingPlan();
+        r->saveSeatingPlanToFile();
+    }
+
+    // Search feature
+    string searchName;
+    cout << "\nEnter student name to search: ";
+    getline(cin, searchName);
+
+    for (ExamRoom* r : rooms) {
+        r->searchStudent(searchName);
+    }
+
+    // Cleanup
+    for (ExamRoom* r : rooms) {
+        delete r;
+    }
+
+    cout << "\nAll seating plans saved successfully.\n";
+
+    return 0;
+}
